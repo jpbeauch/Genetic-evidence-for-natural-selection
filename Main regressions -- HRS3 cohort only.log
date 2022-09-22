@@ -1,0 +1,318 @@
+-------------------------------------------------------------------------------------------------------------------
+      name:  <unnamed>
+       log:  PATH/Main regressions -- HRS3 cohort only.log
+  log type:  text
+ opened on:  15 Jul 2016, 15:24:36
+
+. *log using "Main regressions -- study sample, with LRS (instead of rLRS)", replace
+. *log using "Main regressions -- study sample, age 50-70 for females and 55-70 for males", replace
+. *log using "Main regressions -- all cohorts (HRS0-3) together", replace
+. 
+. ************************************************************
+. ************************************************************
+. ************************************************************
+. ************************************************************
+. ************************************************************
+. 
+. 
+. 
+. 
+. 
+. 
+. 
+. 
+. 
+. ************************************************************
+. ************************************************************
+. ************************************************************
+. ************************************************************
+. ************************************************************
+. * LOAD THE DATA AND DEFINE THE SAMPLE AND THE OPTIONS FOR THE ANALYSES
+. ************************************************************
+. 
+. use dataset_master.dta, clear
+
+. 
+. ************************************************************
+. ************************************************************
+. 
+. * Define relative LRS as our ReproSuccess variable (for the baseline analyses)
+. gen ReproSuccess = relLRS
+(1 missing value generated)
+
+. 
+. ************************************************************
+. ************************************************************
+. 
+. * To keep only the genotyped individuals 
+. * (For the analyses with the scores, only genotyped individuals are used by default;
+. *  but for the analyses with the phenotypic variables, we can either use the sample of all individuals (the defau
+> lt) 
+. *  or only use the sample of genotyped individuals. For the latter, unstar the following line:
+. *keep if hwe_eur_keep==1
+. 
+. 
+. ************************************************************
+. ************************************************************
+. * For the robustness checks:
+. 
+. * 1. With LRS instead of rLRS as the ReproSuccess variable
+. *replace ReproSuccess = absLRS
+. 
+. * 2. With the PLINK2 scores (already outputted below -- no need to alter anything in the code)
+. 
+. * 3. With individuals who were 
+. *       (i) 70 or less in 2008 (born >= 1938) at the time of the last genotyping wave (to see if selection on sur
+> vival after 70 years old biases results)
+. *       (ii) age_childrenMeas>=50 for females and >=55 for males
+. /***
+> keep if byear >=38  & byear <= 53 
+> drop if (age_childrenMeas < 55) & sex == 0 
+> drop if (age_childrenMeas < 50) & sex == 1
+> ***/
+. 
+. * 4. With the study sample (the HRS1-3 cohorts) together with the HRS0 cohort (to run this, comment out the line 
+> "keep if study_sample==1" below)
+. 
+. ************************************************************
+. ************************************************************
+. * Defining the sample for the analyses
+. 
+. * To use the study sample (this sample is used for the main analyses and combines the HRS1-3 cohorts):
+. *keep if study_sample==1
+. 
+. * To use only the HRS0 cohort:
+. *keep if byear >=24  & byear <= 30
+. 
+. * To use only the HRS1 cohort:
+. *keep if byear >=31  & byear <= 41
+. 
+. * To use only the HRS2 cohort:
+. *keep if byear >=42  & byear <= 47 
+. 
+. * To use only the HRS3 cohort:
+. keep if byear >=48  & byear <= 53 
+(12,630 observations deleted)
+
+. * NOTE: there are no observations for pheno_TC for the males in the HRS3 cohort => set pheno_TC to 1 when we need
+>  to run the other analyses for males in the HRS3 cohort
+. replace pheno_TC = 1
+(2,505 real changes made)
+
+. 
+. ************************************************************
+. ************************************************************
+. ************************************************************
+. ************************************************************
+. ************************************************************
+. 
+. 
+. 
+. 
+. 
+. 
+. 
+. ************************************************************
+. ************************************************************
+. ************************************************************
+. ************************************************************
+. ************************************************************
+. * RUNNING THE MAIN REGRESSION ANALYSES (FOR TABLES 1 AND 2)
+. ************************************************************
+. 
+. cap drop PGS
+
+. gen PGS = .
+(2,518 missing values generated)
+
+. cap drop Pheno
+
+. gen Pheno = .
+(2,518 missing values generated)
+
+. cap drop PhenoXgenotyped 
+
+. gen PhenoXgenotyped = .
+(2,518 missing values generated)
+
+. 
+. ************************************************************
+. ************************************************************
+. * REGRESSION ON THE PGS -- females only 
+. 
+. * Regress ReproSuccess on the LDpred PGS ("PGS"), on the PLINK PGS ("PGSraw"), and on the phenotypic variables:
+. foreach var in  BMI EA3 GLU HGT SCZ2 TC AAM  {
+  2.         qui replace PGS = PGSldp_`var'
+  3.         qui reg ReproSuccess PGS i.byear pc*     i.hacohort  if sex == 1
+  4.         est store `var'_ldp
+  5.         qui replace PGS = PGSraw_`var'
+  6.         qui reg ReproSuccess PGS        i.byear pc*     i.hacohort  if sex == 1
+  7.         est store `var'_raw
+  8.         qui replace Pheno = pheno_`var'
+  9.         qui reg ReproSuccess Pheno i.byear                      i.hacohort    if sex == 1
+ 10.         est store `var'_pheno
+ 11. }
+
+. * Estimate table for each trait separately:
+. estimates table BMI_ldp EA3_ldp GLU_ldp HGT_ldp SCZ2_ldp TC_ldp  AAM_ldp, keep(PGS) b se t p stats(N)   
+
+---------------------------------------------------------------------------------------------------------
+    Variable |  BMI_ldp      EA3_ldp      GLU_ldp      HGT_ldp      SCZ2_ldp      TC_ldp      AAM_ldp    
+-------------+-------------------------------------------------------------------------------------------
+         PGS | -.03381878   -.00092633    .00353333   -.01925674    -.0357682    .00959493    .03745931  
+             |  .02494215    .02534232     .0240374    .03250926    .02460634    .02475539     .0243425  
+             |      -1.36        -0.04         0.15        -0.59        -1.45         0.39         1.54  
+             |     0.1756       0.9709       0.8832       0.5538       0.1465       0.6984       0.1243  
+-------------+-------------------------------------------------------------------------------------------
+           N |        765          765          765          765          765          765          765  
+---------------------------------------------------------------------------------------------------------
+                                                                                         legend: b/se/t/p
+
+. estimates table BMI_raw EA3_raw GLU_raw HGT_raw SCZ2_raw TC_raw  AAM_raw, keep(PGS) b se t p stats(N)
+
+---------------------------------------------------------------------------------------------------------
+    Variable |  BMI_raw      EA3_raw      GLU_raw      HGT_raw      SCZ2_raw      TC_raw      AAM_raw    
+-------------+-------------------------------------------------------------------------------------------
+         PGS |  -.0471855    .00863763   -.00766541   -.02904888   -.04029657    .04577446    .03881142  
+             |  .02503931    .02549522    .02536243    .03078698    .02865313    .02563533    .02352385  
+             |      -1.88         0.34        -0.30        -0.94        -1.41         1.79         1.65  
+             |     0.0599       0.7349       0.7626       0.3457       0.1600       0.0746       0.0994  
+-------------+-------------------------------------------------------------------------------------------
+           N |        765          765          765          765          765          765          765  
+---------------------------------------------------------------------------------------------------------
+                                                                                         legend: b/se/t/p
+
+. estimates table BMI_pheno EA3_pheno GLU_pheno  HGT_pheno SCZ2_pheno TC_pheno  AAM_pheno, keep(Pheno) b se t p sta
+> ts(N)
+
+---------------------------------------------------------------------------------------------------------
+    Variable | BMI_pheno    EA3_pheno    GLU_pheno    HGT_pheno    SCZ2_pheno    TC_pheno    AAM_pheno   
+-------------+-------------------------------------------------------------------------------------------
+       Pheno |  .00252297   -.05746731    (omitted)   -.00758126    (omitted)    (omitted)    (omitted)  
+             |  .00293665    .00799832                 .00275999                                         
+             |       0.86        -7.18                     -2.75                                         
+             |     0.3904       0.0000                    0.0061                                         
+-------------+-------------------------------------------------------------------------------------------
+           N |       1374         1372         1381         1379         1381         1381         1381  
+---------------------------------------------------------------------------------------------------------
+                                                                                         legend: b/se/t/p
+
+. 
+. ************************************************************
+. ************************************************************
+. * REGRESSION ON THE PGS -- males only (=> sex == 0) 
+. 
+. * Regress ReproSuccess on the LDpred PGS ("PGS"), on the PLINK PGS ("PGSraw"), and on the phenotypic variables:
+. foreach var in    BMI EA3 GLU HGT SCZ2 TC {
+  2.         qui replace PGS = PGSldp_`var'
+  3.         qui reg ReproSuccess PGS i.byear pc*  i.hacohort    if sex == 0
+  4.         est store `var'_ldp
+  5.         qui replace PGS = PGSraw_`var'
+  6.         qui reg ReproSuccess PGS        i.byear pc*  i.hacohort if sex == 0
+  7.         est store `var'_raw
+  8.         qui replace Pheno = pheno_`var'
+  9.         qui reg ReproSuccess Pheno i.byear                      i.hacohort    if sex == 0
+ 10.         est store `var'_pheno
+ 11. }
+
+. * Estimate table for each trait separately:
+. estimates table BMI_ldp EA3_ldp GLU_ldp HGT_ldp SCZ2_ldp TC_ldp, keep(PGS) b se t p stats(N)    
+
+--------------------------------------------------------------------------------------------
+    Variable |  BMI_ldp      EA3_ldp      GLU_ldp      HGT_ldp      SCZ2_ldp      TC_ldp    
+-------------+------------------------------------------------------------------------------
+         PGS |  .04877691    .01209948   -.05114091   -.02374422   -.00918782     .0216683  
+             |   .0320077    .03072928    .03076807    .04241475    .03245814    .03301392  
+             |       1.52         0.39        -1.66        -0.56        -0.28         0.66  
+             |     0.1281       0.6939       0.0971       0.5758       0.7772       0.5119  
+-------------+------------------------------------------------------------------------------
+           N |        572          572          572          572          572          572  
+--------------------------------------------------------------------------------------------
+                                                                            legend: b/se/t/p
+
+. estimates table BMI_raw EA3_raw GLU_raw HGT_raw SCZ2_raw TC_raw, keep(PGS) b se t p stats(N)
+
+--------------------------------------------------------------------------------------------
+    Variable |  BMI_raw      EA3_raw      GLU_raw      HGT_raw      SCZ2_raw      TC_raw    
+-------------+------------------------------------------------------------------------------
+         PGS |  .06256713    .00401782   -.06237514   -.01234958   -.04123267    .00164049  
+             |  .03184754    .03112254    .03110292    .04189614    .03599808      .032915  
+             |       1.96         0.13        -2.01        -0.29        -1.15         0.05  
+             |     0.0500       0.8973       0.0454       0.7683       0.2525       0.9603  
+-------------+------------------------------------------------------------------------------
+           N |        572          572          572          572          572          572  
+--------------------------------------------------------------------------------------------
+                                                                            legend: b/se/t/p
+
+. estimates table BMI_pheno EA3_pheno GLU_pheno HGT_pheno SCZ2_pheno TC_pheno, keep(Pheno) b se t p stats(N)
+
+--------------------------------------------------------------------------------------------
+    Variable | BMI_pheno    EA3_pheno    GLU_pheno    HGT_pheno    SCZ2_pheno    TC_pheno   
+-------------+------------------------------------------------------------------------------
+       Pheno |  .00804266   -.00776345    (omitted)    .00220685    (omitted)    (omitted)  
+             |  .00432666    .00939936                 .00315421                            
+             |       1.86        -0.83                      0.70                            
+             |     0.0633       0.4090                    0.4843                            
+-------------+------------------------------------------------------------------------------
+           N |       1135         1124         1136         1136         1136         1136  
+--------------------------------------------------------------------------------------------
+                                                                            legend: b/se/t/p
+
+. 
+. ************************************************************
+. ************************************************************
+. * REGRESSION ON THE PGS -- males & females pooled 
+. 
+. * NOTE: As described in the Supporting Information of my article, to ensure that my regressions are well-specifie
+> d 
+. *       (given that females and males in the same household will typically have the same number of children),
+. *       I keep only one person per household for these regressions.
+. 
+. * Create a variable ("HH_PN") that identifies the respondent with the lower PN in each household
+. sort genotyped HHID PN
+
+. bysort genotyped HHID: gen HH_PN = 1 if HHID[_n]~=HHID[_n-1]
+(355 missing values generated)
+
+. replace HH_PN = 0 if missing(HH_PN)
+(355 real changes made)
+
+. 
+. * Regress ReproSuccess on the LDpred PGS ("PGS"):
+. foreach var in  BMI EA3 GLU HGT SCZ2 TC AAM  {
+  2.         qui replace PGS = PGSldp_`var'
+  3.         qui reg ReproSuccess PGS i.byear pc*  sex    i.hacohort  if  HH_PN == 1
+  4.         est store `var'_ldp
+  5.         qui replace PGS = PGSraw_`var'
+  6. }
+
+. * Estimate table for each trait separately:
+. estimates table BMI_ldp EA3_ldp GLU_ldp HGT_ldp SCZ2_ldp TC_ldp , keep(PGS) b se t p stats(N)   
+
+--------------------------------------------------------------------------------------------
+    Variable |  BMI_ldp      EA3_ldp      GLU_ldp      HGT_ldp      SCZ2_ldp      TC_ldp    
+-------------+------------------------------------------------------------------------------
+         PGS |   -.013721   -.00823565   -.03749679   -.01085813   -.00446976    .00734359  
+             |   .0216157    .02126199     .0209681    .02804252    .02151188     .0215725  
+             |      -0.63        -0.39        -1.79        -0.39        -0.21         0.34  
+             |     0.5257       0.6986       0.0740       0.6987       0.8354       0.7336  
+-------------+------------------------------------------------------------------------------
+           N |       1121         1121         1121         1121         1121         1121  
+--------------------------------------------------------------------------------------------
+                                                                            legend: b/se/t/p
+
+. 
+. 
+. ************************************************************
+. ************************************************************
+. ************************************************************
+. ************************************************************
+. ************************************************************
+. 
+. 
+. 
+. 
+. 
+. 
+. 
+. cap log off

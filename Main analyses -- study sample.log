@@ -1,0 +1,915 @@
+-------------------------------------------------------------------------------------------------------------------
+      name:  <unnamed>
+       log:  PATH/Main analyses -- study sample.log
+  log type:  text
+ opened on:  15 Jul 2016, 14:50:56
+
+. *log using "Main regressions -- HRS0 cohort only", replace
+. *log using "Main regressions -- HRS1 cohort only", replace
+. *log using "Main regressions -- HRS2 cohort only", replace
+. *log using "Main regressions -- HRS3 cohort only", replace
+. *log using "Main regressions -- study sample, with LRS (instead of rLRS)", replace
+. *log using "Main regressions -- study sample, age 50-70 for females and 55-70 for males", replace
+. *log using "Main regressions -- all cohorts (HRS0-3) together", replace
+. 
+. ************************************************************
+. ************************************************************
+. ************************************************************
+. ************************************************************
+. ************************************************************
+. 
+. 
+. 
+. 
+. 
+. 
+. 
+. 
+. 
+. ************************************************************
+. ************************************************************
+. ************************************************************
+. ************************************************************
+. ************************************************************
+. * LOAD THE DATA AND DEFINE THE SAMPLE AND THE OPTIONS FOR THE ANALYSES
+. ************************************************************
+. 
+. use dataset_master.dta, clear
+
+. 
+. ************************************************************
+. ************************************************************
+. 
+. * To define relative LRS as our ReproSuccess variable
+. gen ReproSuccess = relLRS
+(1 missing value generated)
+
+.
+. ************************************************************
+. ************************************************************
+. 
+. * To keep only the genotyped individuals 
+. * (For the analyses with the scores, only genotyped individuals are used by default;
+. *  but for the analyses with the phenotypic variables, we can either use the sample of all individuals (the defau
+> lt) 
+. *  or only use the sample of genotyped individuals. For the latter, unstar the following line:
+. *keep if hwe_eur_keep==1
+. 
+.  
+. ************************************************************
+. ************************************************************
+. * For the robustness checks:
+. 
+. * 1. With LRS instead of rLRS as the ReproSuccess variable
+. *replace ReproSuccess = absLRS
+. 
+. * 2. With the PLINK2 scores (already outputted below -- no need to alter anything in the code)
+. 
+. * 3. With individuals who were 
+. *       (i) 70 or less in 2008 (born >= 1938) at the time of the last genotyping wave (to see if selection on sur
+> vival after 70 years old biases results)
+. *       (ii) age_childrenMeas>=50 for females and >=55 for males
+. /***
+> keep if byear >=38  & byear <= 53 
+> drop if (age_childrenMeas < 55) & sex == 0 
+> drop if (age_childrenMeas < 50) & sex == 1
+> ***/
+. 
+. * 4. With the study sample (the HRS1-3 cohorts) together with the HRS0 cohort (to run this, comment out the line 
+> "keep if study_sample==1" below)
+. 
+. ************************************************************
+. ************************************************************
+. * Defining the sample for the analyses
+. 
+. * To use the study sample (this sample is used for the main analyses and combines the HRS1-3 cohorts):
+. keep if study_sample==1
+(3,298 observations deleted)
+
+. 
+. * To use only the HRS0 cohort:
+. *keep if byear >=24  & byear <= 30
+. 
+. * To use only the HRS1 cohort:
+. *keep if byear >=31  & byear <= 41
+. 
+. * To use only the HRS2 cohort:
+. *keep if byear >=42  & byear <= 47 
+. 
+. * To use only the HRS3 cohort:
+. *keep if byear >=48  & byear <= 53 
+. * NOTE: there are no observations for pheno_TC for the males in the HRS3 cohort => set pheno_TC to 1 when we need
+>  to run the other analyses for males in the HRS3 cohort
+. *replace pheno_TC = 1
+. 
+. ************************************************************
+. ************************************************************
+. ************************************************************
+. ************************************************************
+. ************************************************************
+. 
+. 
+. 
+. 
+. 
+. 
+. 
+. ************************************************************
+. ************************************************************
+. ************************************************************
+. ************************************************************
+. ************************************************************
+. * RUNNING THE MAIN REGRESSION ANALYSES (FOR TABLES 1 AND 2)
+. ************************************************************
+. 
+. cap drop PGS
+
+. gen PGS = .
+(11,850 missing values generated)
+
+. cap drop Pheno
+
+. gen Pheno = .
+(11,850 missing values generated)
+
+. cap drop PhenoXgenotyped 
+
+. gen PhenoXgenotyped = .
+(11,850 missing values generated)
+
+. 
+. ************************************************************
+. ************************************************************
+. * REGRESSION ON THE PGS -- females only 
+. 
+. * Regress ReproSuccess on the LDpred PGS ("PGS"), on the PLINK PGS ("PGSraw"), and on the phenotypic variables:
+. foreach var in  BMI EA3 GLU HGT SCZ2 TC AAM  {
+  2.         qui replace PGS = PGSldp_`var'
+  3.         qui reg ReproSuccess PGS i.byear pc*     i.hacohort  if sex == 1
+  4.         est store `var'_ldp
+  5.         qui replace PGS = PGSraw_`var'
+  6.         qui reg ReproSuccess PGS        i.byear pc*     i.hacohort  if sex == 1
+  7.         est store `var'_raw
+  8.         qui replace Pheno = pheno_`var'
+  9.         qui reg ReproSuccess Pheno i.byear                      i.hacohort    if sex == 1
+ 10.         est store `var'_pheno
+ 11. }
+
+. * Estimate table for each trait separately:
+. estimates table BMI_ldp EA3_ldp GLU_ldp HGT_ldp SCZ2_ldp TC_ldp  AAM_ldp, keep(PGS) b se t p stats(N)   
+
+---------------------------------------------------------------------------------------------------------
+    Variable |  BMI_ldp      EA3_ldp      GLU_ldp      HGT_ldp      SCZ2_ldp      TC_ldp      AAM_ldp    
+-------------+-------------------------------------------------------------------------------------------
+         PGS |  .00567468   -.03274596    .00867563   -.01088925     -.000561   -.01158248    .01846301  
+             |  .01037299    .01041356    .01028191    .01410059    .01096451    .01052434    .01054722  
+             |       0.55        -3.14         0.84        -0.77        -0.05        -1.10         1.75  
+             |     0.5844       0.0017       0.3989       0.4400       0.9592       0.2712       0.0801  
+-------------+-------------------------------------------------------------------------------------------
+           N |       3416         3416         3416         3416         3416         3416         3416  
+---------------------------------------------------------------------------------------------------------
+                                                                                         legend: b/se/t/p
+
+. estimates table BMI_raw EA3_raw GLU_raw HGT_raw SCZ2_raw TC_raw  AAM_raw, keep(PGS) b se t p stats(N)
+
+---------------------------------------------------------------------------------------------------------
+    Variable |  BMI_raw      EA3_raw      GLU_raw      HGT_raw      SCZ2_raw      TC_raw      AAM_raw    
+-------------+-------------------------------------------------------------------------------------------
+         PGS |  .00238977   -.02825517   -.00337575    -.0108808   -.00951159    -.0007466    .02225884  
+             |  .01060252    .01053164    .01049585    .01342299    .01249678    .01048886    .01042635  
+             |       0.23        -2.68        -0.32        -0.81        -0.76        -0.07         2.13  
+             |     0.8217       0.0073       0.7478       0.4176       0.4466       0.9433       0.0328  
+-------------+-------------------------------------------------------------------------------------------
+           N |       3416         3416         3416         3416         3416         3416         3416  
+---------------------------------------------------------------------------------------------------------
+                                                                                         legend: b/se/t/p
+
+. estimates table BMI_pheno EA3_pheno GLU_pheno  HGT_pheno SCZ2_pheno TC_pheno  AAM_pheno, keep(Pheno) b se t p sta
+> ts(N)
+
+---------------------------------------------------------------------------------------------------------
+    Variable | BMI_pheno    EA3_pheno    GLU_pheno    HGT_pheno    SCZ2_pheno    TC_pheno    AAM_pheno   
+-------------+-------------------------------------------------------------------------------------------
+       Pheno |  .00816747   -.05682056    (omitted)   -.00644388    (omitted)   -.00019769    (omitted)  
+             |  .00133502    .00321891                 .00120216                 .02142018               
+             |       6.12       -17.65                     -5.36                     -0.01               
+             |     0.0000       0.0000                    0.0000                    0.9926               
+-------------+-------------------------------------------------------------------------------------------
+           N |       6396         6403         6414         6411         6414         4152         6414  
+---------------------------------------------------------------------------------------------------------
+                                                                                         legend: b/se/t/p
+
+. 
+. ************************************************************
+. ************************************************************
+. * REGRESSION ON THE PGS -- males only (=> sex == 0) 
+. 
+. * Regress ReproSuccess on the LDpred PGS ("PGS"), on the PLINK PGS ("PGSraw"), and on the phenotypic variables:
+. foreach var in    BMI EA3 GLU HGT SCZ2 TC {
+  2.         qui replace PGS = PGSldp_`var'
+  3.         qui reg ReproSuccess PGS i.byear pc*  i.hacohort    if sex == 0
+  4.         est store `var'_ldp
+  5.         qui replace PGS = PGSraw_`var'
+  6.         qui reg ReproSuccess PGS        i.byear pc*  i.hacohort if sex == 0
+  7.         est store `var'_raw
+  8.         qui replace Pheno = pheno_`var'
+  9.         qui reg ReproSuccess Pheno i.byear                      i.hacohort    if sex == 0
+ 10.         est store `var'_pheno
+ 11. }
+
+. * Estimate table for each trait separately:
+. estimates table BMI_ldp EA3_ldp GLU_ldp HGT_ldp SCZ2_ldp TC_ldp, keep(PGS) b se t p stats(N)    
+
+--------------------------------------------------------------------------------------------
+    Variable |  BMI_ldp      EA3_ldp      GLU_ldp      HGT_ldp      SCZ2_ldp      TC_ldp    
+-------------+------------------------------------------------------------------------------
+         PGS |   .0155109   -.03070386   -.01282171    -.0049369    .00851429   -.00326379  
+             |   .0128577    .01240789    .01260038    .01758852    .01340581    .01302781  
+             |       1.21        -2.47        -1.02        -0.28         0.64        -0.25  
+             |     0.2278       0.0134       0.3090       0.7790       0.5254       0.8022  
+-------------+------------------------------------------------------------------------------
+           N |       2571         2571         2571         2571         2571         2571  
+--------------------------------------------------------------------------------------------
+                                                                            legend: b/se/t/p
+
+. estimates table BMI_raw EA3_raw GLU_raw HGT_raw SCZ2_raw TC_raw, keep(PGS) b se t p stats(N)
+
+--------------------------------------------------------------------------------------------
+    Variable |  BMI_raw      EA3_raw      GLU_raw      HGT_raw      SCZ2_raw      TC_raw    
+-------------+------------------------------------------------------------------------------
+         PGS |  .02098719   -.03102622   -.01438451    .00134515     .0036561   -.00083077  
+             |  .01302764    .01276093    .01262281    .01673426    .01483457    .01292861  
+             |       1.61        -2.43        -1.14         0.08         0.25        -0.06  
+             |     0.1073       0.0151       0.2546       0.9359       0.8053       0.9488  
+-------------+------------------------------------------------------------------------------
+           N |       2571         2571         2571         2571         2571         2571  
+--------------------------------------------------------------------------------------------
+                                                                            legend: b/se/t/p
+
+. estimates table BMI_pheno EA3_pheno GLU_pheno HGT_pheno SCZ2_pheno TC_pheno, keep(Pheno) b se t p stats(N)
+
+--------------------------------------------------------------------------------------------
+    Variable | BMI_pheno    EA3_pheno    GLU_pheno    HGT_pheno    SCZ2_pheno    TC_pheno   
+-------------+------------------------------------------------------------------------------
+       Pheno |   .0063033   -.02203308    (omitted)    -.0007301    (omitted)   -.02721299  
+             |  .00190675    .00312225                 .00130283                 .02583302  
+             |       3.31        -7.06                     -0.56                     -1.05  
+             |     0.0010       0.0000                    0.5752                    0.2922  
+-------------+------------------------------------------------------------------------------
+           N |       5431         5419         5435         5435         5435         3078  
+--------------------------------------------------------------------------------------------
+                                                                            legend: b/se/t/p
+
+. 
+. ************************************************************
+. ************************************************************
+. * REGRESSION ON THE PGS -- males & females pooled 
+. 
+. * NOTE: As described in the Supporting Information of my article, to ensure that my regressions are well-specifie
+> d 
+. *       (given that females and males in the same household will typically have the same number of children),
+. *       I keep only one person per household for these regressions.
+. 
+. * Create a variable ("HH_PN") that identifies the respondent with the lower PN in each household
+. sort genotyped HHID PN
+
+. bysort genotyped HHID: gen HH_PN = 1 if HHID[_n]~=HHID[_n-1]
+(2,908 missing values generated)
+
+. replace HH_PN = 0 if missing(HH_PN)
+(2,908 real changes made)
+
+. 
+. * Regress ReproSuccess on the LDpred PGS ("PGS"):
+. foreach var in  BMI EA3 GLU HGT SCZ2 TC AAM  {
+  2.         qui replace PGS = PGSldp_`var'
+  3.         qui reg ReproSuccess PGS i.byear pc*  sex    i.hacohort  if  HH_PN == 1
+  4.         est store `var'_ldp
+  5.         qui replace PGS = PGSraw_`var'
+  6. }
+
+. * Estimate table for each trait separately:
+. estimates table BMI_ldp EA3_ldp GLU_ldp HGT_ldp SCZ2_ldp TC_ldp , keep(PGS) b se t p stats(N)   
+
+--------------------------------------------------------------------------------------------
+    Variable |  BMI_ldp      EA3_ldp      GLU_ldp      HGT_ldp      SCZ2_ldp      TC_ldp    
+-------------+------------------------------------------------------------------------------
+         PGS |  .01819531   -.04134867   -.00259555   -.01502897    .01056705   -.00814937  
+             |  .00962149    .00944844     .0094867     .0130797    .01006432    .00967048  
+             |       1.89        -4.38        -0.27        -1.15         1.05        -0.84  
+             |     0.0587       0.0000       0.7844       0.2506       0.2938       0.3994  
+-------------+------------------------------------------------------------------------------
+           N |       4361         4361         4361         4361         4361         4361  
+--------------------------------------------------------------------------------------------
+                                                                            legend: b/se/t/p
+
+. 
+. 
+. ************************************************************
+. ************************************************************
+. ************************************************************
+. ************************************************************
+. ************************************************************
+. 
+. 
+. 
+. 
+. 
+. 
+. 
+. ***
+. ************************************************************
+. ************************************************************
+. ************************************************************
+. ************************************************************
+. ************************************************************
+. * CALCULATING (1) THE RESCALED DIRECTIONAL SELECTION DIFFERENTIAL FOR THE PGS OF EA (IN YEARS OF EA)
+. *                 AND (2) THE DIRECTIONAL SELECTION DIFFERENTIAL FOR EA (IN YEARS OF EA)
+. *               AND THEIR SE'S/95% CI'S
+. 
+. ********************************
+.  
+.  
+. * 0. Defining a program for the R2 of the PGS of EA
+. capture program drop PROG_R2_PGSofEA
+
+. program PROG_R2_PGSofEA, rclass
+  1.         qui reg pheno_EA3       sex i.byear pc*
+  2.         scalar R2o=e(r2)
+  3.         qui reg  pheno_EA3 PGSldp_EA3 sex i.byear pc*
+  4.         return scalar dR2=e(r2)-R2o
+  5.         * To test:
+.         scalar dR2=e(r2)-R2o
+  6.         *scalar dir dR2
+. end
+
+. 
+. * Call the program (to test it)
+. *PROG_R2_PGSofEA
+. 
+. *****
+. * 1. Defining a program for (1) the rescaled directional selection differential for the PGS of EA, in years of EA
+. *               The program also calls PROG_R2_PGSofEA and returns its output, so we can use the bootstrap comman
+> d only once for both quantities
+. 
+. capture program drop PROG_dz_PGS_yrsEA
+
+. program PROG_dz_PGS_yrsEA, rclass
+  1.         * i. First, estimate dz_PGS in Haldanes (this is the coefficient from the main regressions)
+.         qui reg ReproSuccess PGSldp_EA3 i.byear pc*     i.hacohort
+  2.         mat b=e(b)
+  3.         scalar dz_PGS = b[1,1]
+  4.         * ii. Second, estimate sigma_PGS_yrsEA (=SD(EA)*R2(PGSofEA))
+.         PROG_R2_PGSofEA
+  5.         scalar dR2 = r(dR2)
+  6.         qui sum pheno_EA3
+  7.         scalar sigma_PGS_yrsEA = r(sd)*sqrt(dR2)
+  8.         * Calulate and return dz_PGS_yrsEA
+.         return scalar dz_PGS_yrsEA = dz_PGS * sigma_PGS_yrsEA
+  9.         return scalar dR2 = dR2
+ 10.         * To test:
+.         scalar dz_PGS_yrsEA = dz_PGS * sigma_PGS_yrsEA
+ 11.         *scalar dir
+. end
+
+. 
+. * Call the program (to test it)
+. *PROG_dz_PGS_yrsEA
+. 
+. *****
+. * 2. Defining a program for (2) the directional selection differential for EA (in years of EA)
+. *               The program also calls PROG_dz_PGS_yrsEA and returns its output, so we can use the bootstrap comm
+> and only once for both quantities
+. 
+. * Assumed heritability of EA:
+. scalar h2_EA = 0.40
+
+. 
+. capture program drop PROG_dz_EA_yrsEA
+
+. program PROG_dz_EA_yrsEA, rclass
+  1.         PROG_dz_PGS_yrsEA
+  2.         scalar dz_PGS_yrsEA=r(dz_PGS_yrsEA)
+  3.         scalar dR2 = r(dR2)
+  4.         *** 
+.         * Calulate and return dz_EA_yrsEA
+.         return scalar dz_EA_yrsEA = dz_PGS_yrsEA * h2_EA / dR2
+  5.         return scalar dz_PGS_yrsEA = dz_PGS_yrsEA
+  6.         * To test:
+.         scalar dz_EA_yrsEA = dz_PGS_yrsEA * h2_EA / dR2
+  7.         scalar dir
+  8. end
+
+. 
+. * Call the program (to test it)
+. *PROG_dz_EA_yrsEA
+. 
+. 
+. *****
+. 
+. * Bootstrap for females:
+. preserve
+
+. keep if  ~missing(pheno_EA3, ReproSuccess, pc1, byear, hacohort) & sex == 1  
+(8,440 observations deleted)
+
+. tab sex
+
+ragender: r |
+     gender |      Freq.     Percent        Cum.
+------------+-----------------------------------
+     1.male |      3,410      100.00      100.00
+------------+-----------------------------------
+      Total |      3,410      100.00
+
+. bootstrap dz_PGS_yrsEA_females=r(dz_PGS_yrsEA) dz_EA_yrsEA_females=r(dz_EA_yrsEA) ///
+>                         if ~missing(pheno_EA3, ReproSuccess, pc1, byear, hacohort) & sex == 1, reps(1000): PROG_d
+> z_EA_yrsEA
+(running PROG_dz_EA_yrsEA on estimation sample)
+
+Bootstrap replications (1000)
+----+--- 1 ---+--- 2 ---+--- 3 ---+--- 4 ---+--- 5 
+..................................................    50
+..................................................   100
+..................................................   150
+..................................................   200
+..................................................   250
+..................................................   300
+..................................................   350
+..................................................   400
+..................................................   450
+..................................................   500
+..................................................   550
+..................................................   600
+..................................................   650
+..................................................   700
+..................................................   750
+..................................................   800
+..................................................   850
+..................................................   900
+..................................................   950
+..................................................  1000
+
+Bootstrap results                               Number of obs     =      3,410
+                                                Replications      =      1,000
+
+      command:  PROG_dz_EA_yrsEA
+dz_PGS_yrsE~s:  r(dz_PGS_yrsEA)
+dz_EA_yrsEA~s:  r(dz_EA_yrsEA)
+
+--------------------------------------------------------------------------------------
+                     |   Observed   Bootstrap                         Normal-based
+                     |      Coef.   Std. Err.      z    P>|z|     [95% Conf. Interval]
+---------------------+----------------------------------------------------------------
+dz_PGS_yrsEA_females |  -.0217573   .0070853    -3.07   0.002    -.0356443   -.0078704
+ dz_EA_yrsEA_females |   -.108479   .0331017    -3.28   0.001    -.1733571   -.0436008
+--------------------------------------------------------------------------------------
+
+. estat bootstrap, all
+
+Bootstrap results                               Number of obs     =      3,410
+                                                Replications      =       1000
+
+      command:  PROG_dz_EA_yrsEA
+dz_PGS_yrsE~s:  r(dz_PGS_yrsEA)
+dz_EA_yrsEA~s:  r(dz_EA_yrsEA)
+
+------------------------------------------------------------------------------
+             |    Observed               Bootstrap
+             |       Coef.       Bias    Std. Err.  [95% Conf. Interval]
+-------------+----------------------------------------------------------------
+dz_PGS_yrs~s |  -.02175734   .0004734    .0070853   -.0356443  -.0078704   (N)
+             |                                      -.0362696  -.0076465   (P)
+             |                                      -.0374487  -.0092735  (BC)
+dz_EA_yrsE~s |  -.10847897   .0018336   .03310171   -.1733571  -.0436008   (N)
+             |                                      -.1740067   -.041563   (P)
+             |                                      -.1768197  -.0469847  (BC)
+------------------------------------------------------------------------------
+(N)    normal confidence interval
+(P)    percentile confidence interval
+(BC)   bias-corrected confidence interval
+
+. restore
+
+. 
+. * Bootstrap for males:
+. preserve
+
+. keep if  ~missing(pheno_EA3, ReproSuccess, pc1, byear, hacohort) & sex == 0 
+(9,284 observations deleted)
+
+. tab sex
+
+ragender: r |
+     gender |      Freq.     Percent        Cum.
+------------+-----------------------------------
+          0 |      2,566      100.00      100.00
+------------+-----------------------------------
+      Total |      2,566      100.00
+
+. bootstrap dz_PGS_yrsEA_males=r(dz_PGS_yrsEA) dz_EA_yrsEA_males=r(dz_EA_yrsEA) ///
+>                         if ~missing(pheno_EA3, ReproSuccess, pc1, byear, hacohort) & sex == 0, reps(1000): PROG_d
+> z_EA_yrsEA
+(running PROG_dz_EA_yrsEA on estimation sample)
+
+Bootstrap replications (1000)
+----+--- 1 ---+--- 2 ---+--- 3 ---+--- 4 ---+--- 5 
+..................................................    50
+..................................................   100
+..................................................   150
+..................................................   200
+..................................................   250
+..................................................   300
+..................................................   350
+..................................................   400
+..................................................   450
+..................................................   500
+..................................................   550
+..................................................   600
+..................................................   650
+..................................................   700
+..................................................   750
+..................................................   800
+..................................................   850
+..................................................   900
+..................................................   950
+..................................................  1000
+
+Bootstrap results                               Number of obs     =      2,566
+                                                Replications      =      1,000
+
+      command:  PROG_dz_EA_yrsEA
+dz_PGS_yrsE~s:  r(dz_PGS_yrsEA)
+dz_EA_yrsEA~s:  r(dz_EA_yrsEA)
+
+------------------------------------------------------------------------------------
+                   |   Observed   Bootstrap                         Normal-based
+                   |      Coef.   Std. Err.      z    P>|z|     [95% Conf. Interval]
+-------------------+----------------------------------------------------------------
+dz_PGS_yrsEA_males |   -.021756   .0088689    -2.45   0.014    -.0391388   -.0043733
+ dz_EA_yrsEA_males |  -.1276862   .0512024    -2.49   0.013     -.228041   -.0273313
+------------------------------------------------------------------------------------
+
+. estat bootstrap, all                    
+
+Bootstrap results                               Number of obs     =      2,566
+                                                Replications      =       1000
+
+      command:  PROG_dz_EA_yrsEA
+dz_PGS_yrsE~s:  r(dz_PGS_yrsEA)
+dz_EA_yrsEA~s:  r(dz_EA_yrsEA)
+
+------------------------------------------------------------------------------
+             |    Observed               Bootstrap
+             |       Coef.       Bias    Std. Err.  [95% Conf. Interval]
+-------------+----------------------------------------------------------------
+dz_PGS_yrs~s |  -.02175603   .0006626   .00886892   -.0391388  -.0043733   (N)
+             |                                      -.0379295  -.0038835   (P)
+             |                                      -.0398305  -.0049487  (BC)
+dz_EA_yrsE~s |  -.12768618   .0027798    .0512024    -.228041  -.0273313   (N)
+             |                                      -.2271827  -.0233222   (P)
+             |                                      -.2347469  -.0278049  (BC)
+------------------------------------------------------------------------------
+(N)    normal confidence interval
+(P)    percentile confidence interval
+(BC)   bias-corrected confidence interval
+
+. restore
+
+.                         
+. 
+. ************************************************************
+. ************************************************************
+. ************************************************************
+. ************************************************************
+. ************************************************************
+. ***/
+. 
+. 
+. 
+. 
+. 
+. 
+. 
+. ************************************************************
+. ************************************************************
+. ************************************************************
+. ************************************************************
+. ************************************************************
+. * 2. TESTING FOR NONLINEAR SELECTION (LANDE & ARNOLD REGRESSION) 
+. 
+. * Generate variables for the score interactions
+. scalar count1 = 0
+
+. foreach pheno1 in BMI EA3 GLU HGT SCZ2 TC AAM {
+  2.         gen PGS_`pheno1' = PGSldp_`pheno1'
+  3.         scalar count1 = count1 + 1
+  4.         scalar count2 = 0
+  5.         foreach pheno2 in BMI EA3 GLU HGT SCZ2 TC AAM  {
+  6.                 scalar count2 = count2 + 1
+  7.                 if count2>=count1 {
+  8.                         gen PGSx_`pheno1'_`pheno2' = PGSldp_`pheno1'*PGSldp_`pheno2'
+  9.                 }
+ 10.         }
+ 11. }
+(5,863 missing values generated)
+(5,863 missing values generated)
+(5,863 missing values generated)
+(5,863 missing values generated)
+(5,863 missing values generated)
+(5,863 missing values generated)
+(5,863 missing values generated)
+(5,863 missing values generated)
+(5,863 missing values generated)
+(5,863 missing values generated)
+(5,863 missing values generated)
+(5,863 missing values generated)
+(5,863 missing values generated)
+(5,863 missing values generated)
+(5,863 missing values generated)
+(5,863 missing values generated)
+(5,863 missing values generated)
+(5,863 missing values generated)
+(5,863 missing values generated)
+(5,863 missing values generated)
+(5,863 missing values generated)
+(5,863 missing values generated)
+(5,863 missing values generated)
+(5,863 missing values generated)
+(5,863 missing values generated)
+(5,863 missing values generated)
+(5,863 missing values generated)
+(5,863 missing values generated)
+(5,863 missing values generated)
+(5,863 missing values generated)
+(5,863 missing values generated)
+(5,863 missing values generated)
+(5,863 missing values generated)
+(5,863 missing values generated)
+(5,863 missing values generated)
+
+. 
+. * For females (with AAM)
+. reg ReproSuccess   PGS_BMI PGS_EA3 PGS_GLU PGS_HGT PGS_SCZ2 PGS_TC PGS_AAM  ///
+>                         PGSx_BMI_BMI PGSx_EA3_EA3 PGSx_GLU_GLU PGSx_HGT_HGT PGSx_SCZ2_SCZ2 PGSx_TC_TC PGSx_AAM_AA
+> M ///
+>                         PGSx_BMI_EA3 PGSx_BMI_GLU PGSx_BMI_HGT PGSx_BMI_SCZ2 PGSx_BMI_TC PGSx_BMI_AAM ///
+>                         PGSx_EA3_GLU PGSx_EA3_HGT PGSx_EA3_SCZ2 PGSx_EA3_TC PGSx_EA3_AAM ///
+>                         PGSx_GLU_HGT PGSx_GLU_SCZ2 PGSx_GLU_TC PGSx_GLU_AAM ///
+>                         PGSx_HGT_SCZ2 PGSx_HGT_TC PGSx_HGT_AAM ///
+>                         PGSx_SCZ2_TC PGSx_SCZ2_AAM ///
+>                         PGSx_TC_AAM ///
+>                         i.byear pc*     i.hacohort if sex == 1
+
+      Source |       SS           df       MS      Number of obs   =     3,416
+-------------+----------------------------------   F(82, 3333)     =      1.14
+       Model |  33.1574751        82  .404359452   Prob > F        =    0.1786
+    Residual |  1177.77072     3,333  .353366552   R-squared       =    0.0274
+-------------+----------------------------------   Adj R-squared   =    0.0035
+       Total |  1210.92819     3,415  .354590979   Root MSE        =    .59445
+
+--------------------------------------------------------------------------------------
+        ReproSuccess |      Coef.   Std. Err.      t    P>|t|     [95% Conf. Interval]
+---------------------+----------------------------------------------------------------
+             PGS_BMI |   .0029749   .0107621     0.28   0.782    -.0181261     .024076
+             PGS_EA3 |  -.0351997   .0107597    -3.27   0.001     -.056296   -.0141034
+             PGS_GLU |   .0095742   .0103718     0.92   0.356    -.0107615    .0299099
+             PGS_HGT |  -.0079697   .0144856    -0.55   0.582    -.0363712    .0204318
+            PGS_SCZ2 |  -.0008835   .0110409    -0.08   0.936    -.0225312    .0207641
+              PGS_TC |  -.0134577   .0105875    -1.27   0.204    -.0342164     .007301
+             PGS_AAM |   .0220399   .0108863     2.02   0.043     .0006955    .0433843
+        PGSx_BMI_BMI |  -.0059719   .0076025    -0.79   0.432    -.0208779    .0089341
+        PGSx_EA3_EA3 |  -.0117828   .0077163    -1.53   0.127     -.026912    .0033465
+        PGSx_GLU_GLU |  -.0070734    .007379    -0.96   0.338    -.0215413    .0073945
+        PGSx_HGT_HGT |  -.0091578   .0069481    -1.32   0.188    -.0227807    .0044651
+      PGSx_SCZ2_SCZ2 |   .0099542   .0074604     1.33   0.182    -.0046733    .0245817
+          PGSx_TC_TC |  -.0072246   .0074057    -0.98   0.329    -.0217447    .0072955
+        PGSx_AAM_AAM |  -.0038318   .0076113    -0.50   0.615    -.0187551    .0110916
+        PGSx_BMI_EA3 |   .0049248   .0111399     0.44   0.658    -.0169169    .0267665
+        PGSx_BMI_GLU |   .0021148   .0109606     0.19   0.847    -.0193753    .0236049
+        PGSx_BMI_HGT |  -.0079339   .0115282    -0.69   0.491     -.030537    .0146693
+       PGSx_BMI_SCZ2 |   .0170458   .0107502     1.59   0.113    -.0040319    .0381234
+         PGSx_BMI_TC |   .0092729   .0108209     0.86   0.392    -.0119432    .0304891
+        PGSx_BMI_AAM |  -.0115935   .0112286    -1.03   0.302    -.0336091    .0104221
+        PGSx_EA3_GLU |  -.0056039   .0105304    -0.53   0.595    -.0262506    .0150428
+        PGSx_EA3_HGT |  -.0032888   .0113978    -0.29   0.773    -.0256361    .0190585
+       PGSx_EA3_SCZ2 |   .0012447   .0109626     0.11   0.910    -.0202494    .0227388
+         PGSx_EA3_TC |  -.0104158   .0108121    -0.96   0.335    -.0316149    .0107833
+        PGSx_EA3_AAM |    .002937   .0108901     0.27   0.787     -.018415     .024289
+        PGSx_GLU_HGT |  -.0203087   .0110216    -1.84   0.065    -.0419184    .0013011
+       PGSx_GLU_SCZ2 |  -.0077736   .0106715    -0.73   0.466    -.0286969    .0131498
+         PGSx_GLU_TC |  -.0074353   .0103574    -0.72   0.473    -.0277427    .0128722
+        PGSx_GLU_AAM |  -.0148557     .01076    -1.38   0.167    -.0359525    .0062411
+       PGSx_HGT_SCZ2 |   .0040724   .0113665     0.36   0.720    -.0182137    .0263584
+         PGSx_HGT_TC |   .0001779   .0109773     0.02   0.987    -.0213449    .0217008
+        PGSx_HGT_AAM |   .0027973   .0117713     0.24   0.812    -.0202823    .0258769
+        PGSx_SCZ2_TC |  -.0281981   .0104395    -2.70   0.007    -.0486667   -.0077296
+       PGSx_SCZ2_AAM |  -.0186133    .011128    -1.67   0.094    -.0404316     .003205
+         PGSx_TC_AAM |   .0017182     .01087     0.16   0.874    -.0195943    .0230308
+                     |
+               byear |
+                 32  |   .0012155   .0710671     0.02   0.986    -.1381241    .1405551
+                 33  |  -.0137302   .0718658    -0.19   0.848    -.1546358    .1271754
+                 34  |  -.0409496   .0675753    -0.61   0.545    -.1734429    .0915437
+                 35  |   .0477916   .0680728     0.70   0.483    -.0856771    .1812604
+                 36  |  -.0762538   .0666854    -1.14   0.253    -.2070023    .0544948
+                 37  |    .012682   .0656353     0.19   0.847    -.1160075    .1413716
+                 38  |  -.0214623   .0659686    -0.33   0.745    -.1508053    .1078808
+                 39  |  -.0320446    .068986    -0.46   0.642    -.1673037    .1032146
+                 40  |  -.0296307   .0667924    -0.44   0.657    -.1605889    .1013276
+                 41  |  -.0024687   .0664488    -0.04   0.970    -.1327533    .1278158
+                 42  |   .0178226   .0693711     0.26   0.797    -.1181916    .1538368
+                 43  |  -.0627664   .0715659    -0.88   0.381    -.2030838    .0775511
+                 44  |  -.0369328   .0732539    -0.50   0.614    -.1805601    .1066944
+                 45  |   .0390304   .0756973     0.52   0.606    -.1093874    .1874482
+                 46  |  -.0628458   .0779807    -0.81   0.420    -.2157406     .090049
+                 47  |  -.0490843   .0753952    -0.65   0.515    -.1969099    .0987413
+                 48  |  -.0459807   .0799054    -0.58   0.565    -.2026493     .110688
+                 49  |    -.11507    .077762    -1.48   0.139    -.2675362    .0373961
+                 50  |  -.0873887   .0797121    -1.10   0.273    -.2436782    .0689008
+                 51  |   -.045468   .0847725    -0.54   0.592    -.2116793    .1207433
+                 52  |  -.1306278   .0892259    -1.46   0.143    -.3055709    .0443154
+                 53  |  -.1732307   .0901108    -1.92   0.055    -.3499088    .0034475
+                     |
+                 pc1 |  -1.952722   1.105562    -1.77   0.077     -4.12037    .2149272
+                 pc2 |  -.6762886   .9884585    -0.68   0.494    -2.614335    1.261758
+                 pc3 |  -1.608154   1.351281    -1.19   0.234    -4.257579    1.041271
+                 pc4 |   1.073066   .9668652     1.11   0.267    -.8226437    2.968775
+                 pc5 |  -.2579799   .9817436    -0.26   0.793    -2.182861    1.666901
+                 pc6 |  -1.075144   .9623613    -1.12   0.264    -2.962023    .8117344
+                 pc7 |  -.5756702    .942776    -0.61   0.541    -2.424148    1.272808
+                 pc8 |   .7453371   .9764909     0.76   0.445    -1.169245    2.659919
+                 pc9 |   1.587407   .9766181     1.63   0.104    -.3274244    3.502239
+                pc10 |  -.3611466   .9687114    -0.37   0.709    -2.260476    1.538183
+                pc11 |   -.203808   1.021614    -0.20   0.842    -2.206861    1.799245
+                pc12 |   -.419372     .98036    -0.43   0.669     -2.34154    1.502796
+                pc13 |  -.1405464   .9557787    -0.15   0.883    -2.014519    1.733426
+                pc14 |   1.692558   .9419477     1.80   0.072    -.1542958    3.539412
+                pc15 |   .0096367    .967851     0.01   0.992    -1.888006    1.907279
+                pc16 |   .2147695   .9729722     0.22   0.825    -1.692914    2.122453
+                pc17 |   .1086027   .9418862     0.12   0.908    -1.738131    1.955336
+                pc18 |   1.868168   .9490791     1.97   0.049     .0073312    3.729004
+                pc19 |  -.5510578   .9594961    -0.57   0.566    -2.432319    1.330203
+                pc20 |  -1.094115   .9541194    -1.15   0.252    -2.964834    .7766043
+                     |
+            hacohort |
+            1.ahead  |   .3742504   .2048541     1.83   0.068    -.0274022     .775903
+             2.coda  |  -.0365283   .2306603    -0.16   0.874    -.4887785    .4157218
+              3.hrs  |   .1459582   .1517738     0.96   0.336    -.1516212    .4435375
+        4.warbabies  |   .1822541   .1562963     1.17   0.244    -.1241923    .4887005
+5.early babyboomers  |   .2446436   .1612071     1.52   0.129    -.0714314    .5607185
+                     |
+               _cons |   .9007735   .1594444     5.65   0.000     .5881546    1.213392
+--------------------------------------------------------------------------------------
+
+.                         
+. * For males (without AAM)
+. foreach pheno in PGS_AAM PGSx_AAM_AAM PGSx_BMI_AAM PGSx_EA3_AAM PGSx_GLU_AAM PGSx_HGT_AAM PGSx_SCZ2_AAM PGSx_TC_A
+> AM  {
+  2.         replace `pheno' = 0
+  3. }
+(11,850 real changes made)
+(11,850 real changes made)
+(11,850 real changes made)
+(11,850 real changes made)
+(11,850 real changes made)
+(11,850 real changes made)
+(11,850 real changes made)
+(11,850 real changes made)
+
+. reg ReproSuccess   PGS_BMI PGS_EA3 PGS_GLU PGS_HGT PGS_SCZ2 PGS_TC PGS_AAM  ///
+>                         PGSx_BMI_BMI PGSx_EA3_EA3 PGSx_GLU_GLU PGSx_HGT_HGT PGSx_SCZ2_SCZ2 PGSx_TC_TC PGSx_AAM_AA
+> M ///
+>                         PGSx_BMI_EA3 PGSx_BMI_GLU PGSx_BMI_HGT PGSx_BMI_SCZ2 PGSx_BMI_TC PGSx_BMI_AAM ///
+>                         PGSx_EA3_GLU PGSx_EA3_HGT PGSx_EA3_SCZ2 PGSx_EA3_TC PGSx_EA3_AAM ///
+>                         PGSx_GLU_HGT PGSx_GLU_SCZ2 PGSx_GLU_TC PGSx_GLU_AAM ///
+>                         PGSx_HGT_SCZ2 PGSx_HGT_TC PGSx_HGT_AAM ///
+>                         PGSx_SCZ2_TC PGSx_SCZ2_AAM ///
+>                         PGSx_TC_AAM ///
+>                         i.byear pc*     i.hacohort if sex == 0
+note: PGS_AAM omitted because of collinearity
+note: PGSx_AAM_AAM omitted because of collinearity
+note: PGSx_BMI_AAM omitted because of collinearity
+note: PGSx_EA3_AAM omitted because of collinearity
+note: PGSx_GLU_AAM omitted because of collinearity
+note: PGSx_HGT_AAM omitted because of collinearity
+note: PGSx_SCZ2_AAM omitted because of collinearity
+note: PGSx_TC_AAM omitted because of collinearity
+
+      Source |       SS           df       MS      Number of obs   =     2,571
+-------------+----------------------------------   F(74, 2496)     =      1.16
+       Model |  33.7869943        74  .456581005   Prob > F        =    0.1684
+    Residual |  982.775307     2,496  .393740107   R-squared       =    0.0332
+-------------+----------------------------------   Adj R-squared   =    0.0046
+       Total |   1016.5623     2,570  .395549533   Root MSE        =    .62749
+
+--------------------------------------------------------------------------------------
+        ReproSuccess |      Coef.   Std. Err.      t    P>|t|     [95% Conf. Interval]
+---------------------+----------------------------------------------------------------
+             PGS_BMI |   .0120808   .0131096     0.92   0.357    -.0136259    .0377875
+             PGS_EA3 |  -.0290476   .0126946    -2.29   0.022    -.0539407   -.0041545
+             PGS_GLU |  -.0122691   .0127242    -0.96   0.335    -.0372203     .012682
+             PGS_HGT |   .0038974   .0178801     0.22   0.827    -.0311641    .0389588
+            PGS_SCZ2 |   .0064371   .0135221     0.48   0.634    -.0200786    .0329529
+              PGS_TC |  -.0044604   .0131585    -0.34   0.735     -.030263    .0213422
+             PGS_AAM |          0  (omitted)
+        PGSx_BMI_BMI |  -.0014353   .0097235    -0.15   0.883    -.0205023    .0176317
+        PGSx_EA3_EA3 |  -.0038139   .0089934    -0.42   0.672    -.0214493    .0138214
+        PGSx_GLU_GLU |  -.0022458   .0090202    -0.25   0.803    -.0199337    .0154421
+        PGSx_HGT_HGT |   -.000341   .0086176    -0.04   0.968    -.0172394    .0165574
+      PGSx_SCZ2_SCZ2 |   .0219315   .0090382     2.43   0.015     .0042083    .0396547
+          PGSx_TC_TC |  -.0000477   .0086769    -0.01   0.996    -.0170623    .0169669
+        PGSx_AAM_AAM |          0  (omitted)
+        PGSx_BMI_EA3 |    .004081    .013151     0.31   0.756    -.0217071     .029869
+        PGSx_BMI_GLU |  -.0108151   .0128842    -0.84   0.401    -.0360798    .0144497
+        PGSx_BMI_HGT |   -.014522    .013418    -1.08   0.279    -.0408336    .0117897
+       PGSx_BMI_SCZ2 |   .0153168   .0131705     1.16   0.245    -.0105094    .0411431
+         PGSx_BMI_TC |   .0158185   .0135999     1.16   0.245    -.0108497    .0424867
+        PGSx_BMI_AAM |          0  (omitted)
+        PGSx_EA3_GLU |    .017104   .0124189     1.38   0.169    -.0072484    .0414564
+        PGSx_EA3_HGT |   .0013396   .0127596     0.10   0.916     -.023681    .0263601
+       PGSx_EA3_SCZ2 |  -.0316713    .012821    -2.47   0.014    -.0568123   -.0065304
+         PGSx_EA3_TC |   .0002187   .0129452     0.02   0.987    -.0251658    .0256032
+        PGSx_EA3_AAM |          0  (omitted)
+        PGSx_GLU_HGT |  -.0021275   .0128865    -0.17   0.869    -.0273968    .0231418
+       PGSx_GLU_SCZ2 |   .0078041   .0132635     0.59   0.556    -.0182045    .0338126
+         PGSx_GLU_TC |   .0133172   .0132036     1.01   0.313     -.012574    .0392084
+        PGSx_GLU_AAM |          0  (omitted)
+       PGSx_HGT_SCZ2 |   .0215435   .0136797     1.57   0.115    -.0052812    .0483682
+         PGSx_HGT_TC |  -.0096171   .0127271    -0.76   0.450    -.0345739    .0153396
+        PGSx_HGT_AAM |          0  (omitted)
+        PGSx_SCZ2_TC |   -.004409   .0128664    -0.34   0.732     -.029639    .0208209
+       PGSx_SCZ2_AAM |          0  (omitted)
+         PGSx_TC_AAM |          0  (omitted)
+                     |
+               byear |
+                 32  |  -.1106142   .0798197    -1.39   0.166    -.2671338    .0459054
+                 33  |  -.0469084   .0853816    -0.55   0.583    -.2143345    .1205177
+                 34  |  -.0122981   .0805636    -0.15   0.879    -.1702763    .1456802
+                 35  |  -.0578933   .0800455    -0.72   0.470    -.2148557    .0990691
+                 36  |  -.0380779   .0808446    -0.47   0.638    -.1966072    .1204514
+                 37  |  -.1341799   .0782175    -1.72   0.086    -.2875577    .0191979
+                 38  |  -.0926989   .0785526    -1.18   0.238    -.2467338     .061336
+                 39  |  -.1095694   .0778013    -1.41   0.159    -.2621311    .0429923
+                 40  |  -.0126461   .0767517    -0.16   0.869    -.1631496    .1378574
+                 41  |  -.1193394   .0765316    -1.56   0.119    -.2694112    .0307325
+                 42  |  -.0552717    .100375    -0.55   0.582    -.2520986    .1415552
+                 43  |  -.1492735     .10455    -1.43   0.153    -.3542871    .0557402
+                 44  |  -.1559448   .1157295    -1.35   0.178    -.3828805    .0709908
+                 45  |  -.1934351   .1119563    -1.73   0.084    -.4129719    .0261018
+                 46  |  -.1196791   .1050401    -1.14   0.255    -.3256537    .0862955
+                 47  |  -.1380696   .1143309    -1.21   0.227    -.3622627    .0861235
+                 48  |   -.000567   .1350371    -0.00   0.997    -.2653632    .2642292
+                 49  |  -.1127908   .1412117    -0.80   0.425    -.3896949    .1641132
+                 50  |  -.0954337      .1382    -0.69   0.490    -.3664322    .1755648
+                 51  |  -.1774564   .1429324    -1.24   0.215    -.4577346    .1028218
+                 52  |  -.0675616   .1404306    -0.48   0.630    -.3429341    .2078108
+                 53  |  -.0313015   .1459276    -0.21   0.830    -.3174531    .2548501
+                     |
+                 pc1 |   -.691634   1.313955    -0.53   0.599    -3.268189    1.884921
+                 pc2 |   1.322133   1.203083     1.10   0.272    -1.037011    3.681276
+                 pc3 |  -3.375115   1.648444    -2.05   0.041    -6.607574   -.1426569
+                 pc4 |   .3766384   1.166526     0.32   0.747     -1.91082    2.664096
+                 pc5 |  -1.398543   1.203961    -1.16   0.246    -3.759409     .962323
+                 pc6 |   .3343662   1.177782     0.28   0.777    -1.975165    2.643897
+                 pc7 |   .0209493   1.195934     0.02   0.986    -2.324176    2.366075
+                 pc8 |  -.6401199   1.184258    -0.54   0.589    -2.962349    1.682109
+                 pc9 |  -.9896038   1.189297    -0.83   0.405    -3.321714    1.342507
+                pc10 |   1.801027   1.147506     1.57   0.117    -.4491342    4.051189
+                pc11 |   .6407506   1.188831     0.54   0.590    -1.690446    2.971947
+                pc12 |   2.274537   1.201002     1.89   0.058    -.0805246    4.629599
+                pc13 |  -.8723444   1.209392    -0.72   0.471     -3.24386    1.499171
+                pc14 |  -1.834032   1.165479    -1.57   0.116    -4.119437    .4513727
+                pc15 |   .7604743   1.162528     0.65   0.513    -1.519144    3.040093
+                pc16 |    .034961    1.18374     0.03   0.976    -2.286252    2.356174
+                pc17 |   -1.23345   1.201064    -1.03   0.305    -3.588635    1.121735
+                pc18 |   .1025819   1.184317     0.09   0.931    -2.219764    2.424928
+                pc19 |   .3755771   1.169396     0.32   0.748    -1.917509    2.668663
+                pc20 |   1.769572   1.173523     1.51   0.132    -.5316062     4.07075
+                     |
+            hacohort |
+            1.ahead  |   1.135921   .5782998     1.96   0.050     .0019241    2.269917
+             2.coda  |   .4291424    .550229     0.78   0.436    -.6498099    1.508095
+              3.hrs  |   .8163753   .4486353     1.82   0.069    -.0633604    1.696111
+        4.warbabies  |   .9054716   .4538719     1.99   0.046     .0154675    1.795476
+5.early babyboomers  |   .8145043    .464004     1.76   0.079     -.095368    1.724377
+                     |
+               _cons |    .250534   .4532177     0.55   0.580    -.6381873    1.139255
+--------------------------------------------------------------------------------------
+
+. 
+. 
+. ************************************************************
+. ************************************************************
+. ************************************************************
+. ************************************************************
+. ************************************************************
+. 
+. 
+. 
+. 
+. 
+. 
+.  
+. * Close logs
+. cap log close
